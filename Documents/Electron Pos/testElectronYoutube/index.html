@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Receiver</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #075e54;
+        }
+        #startButton {
+            background-color: #25d366;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        #qrcode img {
+            display: block;
+            margin: 20px auto;
+            max-width: 100%;
+        }
+        #status {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        #messages {
+            margin-top: 20px;
+        }
+        .message {
+            background-color: #dcf8c6;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message img, .message iframe {
+            max-width: 100%;
+            margin-top: 10px;
+        }
+        #error {
+            color: red;
+            margin-top: 10px;
+        }
+
+        .media-container {
+            max-width: 300px;
+            margin-top: 10px;
+        }
+        .media-container img, .media-container iframe {
+            max-width: 100%;
+            border: 1px solid #ccc;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WhatsApp Receiver</h1>
+        <button id="startButton">Start WhatsApp</button>
+        <div id="qrcode"></div>
+        <div id="status"></div>
+        <div id="messages"></div>
+        <div id="error"></div>
+    </div>
+
+    <script>
+        const startButton = document.getElementById('startButton');
+        const qrcodeDiv = document.getElementById('qrcode');
+        const statusDiv = document.getElementById('status');
+        const messagesDiv = document.getElementById('messages');
+        const errorDiv = document.getElementById('error');
+
+        startButton.addEventListener('click', () => {
+            window.electronAPI.startWhatsApp();
+            statusDiv.textContent = 'Connecting...';
+        });
+
+        window.electronAPI.onQR((event, qrDataURL) => {
+            qrcodeDiv.innerHTML = `<img src="${qrDataURL}" alt="QR Code">`;
+            statusDiv.textContent = 'Scan this QR code with your WhatsApp';
+        });
+
+        window.electronAPI.onConnected(() => {
+            statusDiv.textContent = 'Connected to WhatsApp';
+            qrcodeDiv.innerHTML = '';
+        });
+
+        window.electronAPI.onMessage((event, message) => {
+            console.log('Received message:', message);
+            const messageElement = document.createElement('div');
+            messageElement.className = 'message';
+            
+            let content = `<strong>From ${message.from}:</strong> ${message.content}`;
+            
+            if (message.mediaUrl) {
+                console.log('Media URL:', message.mediaUrl);
+                content += '<div class="media-container">';
+                if (message.mediaType === 'image') {
+                    content += `<img src="${message.mediaUrl}" alt="Received Image" onerror="console.error('Error loading image:', this.src); this.onerror=null; this.src='app://./error-image.png';">`;
+                } else if (message.mediaType === 'document') {
+                    content += `<iframe src="${message.mediaUrl}" width="200%" height="500px"></iframe>`;
+                }
+                content += '</div>';
+            }
+            
+            messageElement.innerHTML = content;
+            messagesDiv.appendChild(messageElement);
+        });
+
+        window.electronAPI.onError((event, errorMessage) => {
+            errorDiv.textContent = `Error: ${errorMessage}`;
+        });
+    </script>
+</body>
+</html>
